@@ -1,0 +1,41 @@
+<idea-plugin>
+    <id>org.arxing.gitsplitter</id>
+    <name>Git Splitter</name>
+    <vendor email="meiswind711108@gmail.com">Arxing</vendor>
+
+    <description><![CDATA[
+    Hello
+    ]]></description>
+
+    <depends>com.intellij.modules.lang</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <postStartupActivity implementation="org.arxing.worker.Initializer"/>
+
+        <fileType name="Split file"
+                  implementationClass="org.arxing.filetype.GitSplitFileType"
+                  fieldName="INSTANCE"
+                  language="JSON"
+                  extensions="gitsplit"/>
+
+        <projectService serviceInterface="org.arxing.service.ConfigurationService"
+                        serviceImplementation="org.arxing.service.impl.ConfigurationServiceImpl"/>
+    </extensions>
+
+    <actions>
+        <group text="Git Splitter"
+               popup="true"
+               icon="icons/guan.jpg">
+            <add-to-group group-id="ProjectViewPopupMenu"
+                          anchor="last"/>
+            <action class="org.arxing.action.SplitAction"
+                    id="GitSplitter.GittingSplitAction"
+                    text="Split File"
+                    icon="icons/uu.png"/>
+
+            <action id="GitSplitter.MergeAction"
+                    class="org.arxing.action.MergeAction"
+                    text="Merge Files Into"/>
+        </group>
+    </actions>
+</idea-plugin>
