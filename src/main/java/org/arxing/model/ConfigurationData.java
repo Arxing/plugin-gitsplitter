@@ -56,6 +56,14 @@ public class ConfigurationData {
         public String getType() {
             return type;
         }
+
+        public void setPath(String path) {
+            this.path = path;
+        }
+
+        public void setType(String type) {
+            this.type = type;
+        }
     }
 
     public static class TraceChildNode {
@@ -73,6 +81,14 @@ public class ConfigurationData {
 
         public String getType() {
             return type;
+        }
+
+        public void setPath(String path) {
+            this.path = path;
+        }
+
+        public void setType(String type) {
+            this.type = type;
         }
     }
 }

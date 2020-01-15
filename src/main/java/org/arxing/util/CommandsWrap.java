@@ -2,7 +2,7 @@ package org.arxing.util;
 
 import com.intellij.openapi.application.ApplicationManager;
 
-import org.arxing.functions.ThrowsAction;
+import org.arxing.interfaces.ThrowsAction;
 
 public class CommandsWrap {
     private CommandsWrap() {

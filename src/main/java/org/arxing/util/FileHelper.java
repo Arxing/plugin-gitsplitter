@@ -5,7 +5,7 @@ import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
 
 import org.arxing.axutils_java.JParser;
-import org.arxing.functions.ThrowsConsumer;
+import org.arxing.interfaces.ThrowsConsumer;
 import org.arxing.model.ConfigurationData;
 import org.arxing.service.ConfigurationService;
 

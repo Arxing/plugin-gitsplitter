@@ -24,6 +24,10 @@ public interface ConfigurationService {
 
     ConfigurationData.TraceTargetNode findParentTargetOfChild(String childPath);
 
+    ConfigurationData.TraceChildNode findFirstTraceChild(String childPath);
+
+    ConfigurationData.TraceChildNode findTraceChildInTarget(String targetPath, String childPath);
+
     void addTraceTarget(String targetPath, SupportFileType fileType);
 
     void removeTraceTarget(String targetPath);
@@ -31,6 +35,10 @@ public interface ConfigurationService {
     void addTraceChildInTarget(String targetPath, String childPath, SupportFileType childFileType);
 
     void removeTraceChildInTarget(String targetPath, String childPath);
+
+    void moveTraceTarget(String targetPath, String newPath);
+
+    void moveTraceChildInTarget(String targetPath, String childPath, String newChildPath);
 
     boolean isInTrace(String targetPath);
 
@@ -41,6 +49,8 @@ public interface ConfigurationService {
     void runMergeAction(VirtualFileEx merged, List<VirtualFileEx> children, boolean needToCreateChildren);
 
     void runSplitAction(VirtualFile file, String tag, SupportFileType fileType);
+
+
 
     static ConfigurationData initConfigurationData() {
         ConfigurationData data = new ConfigurationData();
