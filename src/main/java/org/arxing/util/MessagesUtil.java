@@ -4,10 +4,10 @@ import com.annimon.stream.Collectors;
 import com.annimon.stream.Stream;
 import com.intellij.openapi.ui.Messages;
 
-public class MessagesWrap {
+public class MessagesUtil {
     public final static String TITLE = "Git Splitter";
 
-    private MessagesWrap() {
+    private MessagesUtil() {
     }
 
     public static void showInfo(String format, Object... params) {
@@ -31,5 +31,11 @@ public class MessagesWrap {
 
     public static void println(String format, Object... params) {
         System.out.println(String.format(format, params));
+    }
+
+    public static void highlightPrint(String format, Object... params) {
+        println("\n===========================================================");
+        println(format, params);
+        println("===========================================================\n\n");
     }
 }

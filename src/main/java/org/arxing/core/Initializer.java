@@ -1,8 +1,6 @@
-package org.arxing.worker;
+package org.arxing.core;
 
 import com.annimon.stream.Stream;
-import com.intellij.codeInspection.LocalInspectionTool;
-import com.intellij.lang.annotation.Annotator;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.startup.StartupActivity;
@@ -20,7 +18,6 @@ import com.intellij.util.messages.MessageBusConnection;
 import org.arxing.interfaces.VirtualFileWatcher;
 import org.arxing.model.ConfigurationData;
 import org.arxing.service.ConfigurationService;
-import org.arxing.util.MessagesWrap;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -31,14 +28,12 @@ public class Initializer implements StartupActivity, BulkFileListener {
     private void listenAllTrace() {
         MessageBusConnection connection = ApplicationManager.getApplication().getMessageBus().connect();
         connection.subscribe(VirtualFileManager.VFS_CHANGES, this);
-
-
     }
 
     @Override public void runActivity(@NotNull Project project) {
+        listenAllTrace();
         service = ConfigurationService.getInstance(project);
         service.mergeAll();
-        listenAllTrace();
     }
 
     @Override public void after(@NotNull List<? extends VFileEvent> events) {
@@ -96,7 +91,7 @@ public class Initializer implements StartupActivity, BulkFileListener {
                                      ConfigurationData.TraceTargetNode targetNode,
                                      ConfigurationData.TraceChildNode childNode) {
             String relOldPath = service.computeRelPath(e.getOldPath());
-            String relNewPath = service.computeRelPath(e.getNewPath());
+            String relNewPath = service.computeRelPath(e.getPath());
             if (isTarget) {
                 service.moveTraceTarget(relOldPath, relNewPath);
             } else {
@@ -132,7 +127,7 @@ public class Initializer implements StartupActivity, BulkFileListener {
             if (!e.isRename())
                 return;
             String relOldPath = service.computeRelPath(e.getOldPath());
-            String relNewPath = service.computeRelPath(e.getNewPath());
+            String relNewPath = service.computeRelPath(e.getPath());
             if (isTarget) {
                 service.moveTraceTarget(relOldPath, relNewPath);
             } else {

@@ -1,4 +1,4 @@
-package org.arxing.filetype;
+package org.arxing.core;
 
 import com.intellij.icons.AllIcons;
 import com.intellij.json.JsonLanguage;

@@ -1,50 +1,63 @@
 package org.arxing.service.impl;
 
+import com.annimon.stream.Stream;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.intellij.openapi.editor.Document;
+import com.intellij.openapi.fileEditor.FileEditorManager;
+import com.intellij.openapi.project.Project;
+import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.util.xml.DomElementsNavigationManager;
+
 import org.arxing.axutils_java.JParser;
-import org.arxing.manager.SupportFileManager;
-import org.arxing.manager.SupportFileType;
+import org.arxing.axutils_java.StringUtils;
+import org.arxing.core.FileAnalyzer;
+import org.arxing.core.GitsplitterInspection;
+import org.arxing.core.SupportFileManager;
+import org.arxing.core.SupportFileType;
 import org.arxing.model.ConfigurationData;
 import org.arxing.model.VirtualFileEx;
 import org.arxing.service.ConfigurationService;
-import org.arxing.util.CommandsWrap;
 import org.arxing.util.FileHelper;
+import org.arxing.util.MessagesUtil;
 
-import com.annimon.stream.Stream;
-import com.intellij.openapi.project.Project;
-import com.intellij.openapi.vfs.VfsUtil;
-import com.intellij.openapi.vfs.VirtualFile;
-import com.sun.istack.NotNull;
-
-import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 
 public class ConfigurationServiceImpl implements ConfigurationService {
-    public final static String SUFFIX = "gitsplit";
+    public final static String SPLIT_FILE_SUFFIX = "gs";
     private Project project;
     private ConfigurationData configurationData;
     private VirtualFile configurationFile;
 
     public ConfigurationServiceImpl(Project project) {
         this.project = project;
-        FileHelper.findOrCreateConfigurationFile(project, file -> {
-            configurationFile = file;
-            configurationData = JParser.fromJsonOrNull(VfsUtil.loadText(configurationFile), ConfigurationData.class);
-        });
+        configurationFile = FileHelper.findOrCreateConfigurationFile(project);
+        String configurationContent = FileHelper.readSync(project, configurationFile);
+        configurationData = JParser.fromJsonOrNull(configurationContent, ConfigurationData.class);
     }
 
-    private String relPath(String path) {
-        return new File(Objects.requireNonNull(project.getBasePath())).toPath()
-                                                                      .relativize(new File(path).toPath())
-                                                                      .toString()
-                                                                      .replace("\\", "/");
+    private boolean isRelPathExist(String relPath) {
+        return relPath != null && FileHelper.exists(computeFullPath(relPath));
+    }
+
+    @Override public String computeRelPath(String path) {
+        return FileHelper.computeRelPath(project, path);
+    }
+
+    @Override public String computeFullPath(String path) {
+        return FileHelper.computeFullPath(project, path);
     }
 
     @Override public void syncConfiguration() {
         String content = JParser.toPrettyJson(configurationData);
-        FileHelper.writeContent(configurationFile, content);
+        FileHelper.writeSync(project, configurationFile, content);
     }
 
     @Override public List<ConfigurationData.TraceTargetNode> getAllTraceTarget() {
@@ -137,8 +150,17 @@ public class ConfigurationServiceImpl implements ConfigurationService {
     }
 
     @Override public boolean isChildOfTarget(String targetPath, String childPath) {
-        if (isInTrace(targetPath)) {
-            return Stream.of(findTraceTarget(targetPath).getChildren()).anyMatch(o -> o.getPath().equalsIgnoreCase(childPath));
+        if (!isInTrace(targetPath))
+            return false;
+        return Stream.of(findTraceTarget(targetPath).getChildren()).anyMatch(o -> o.getPath().equalsIgnoreCase(childPath));
+    }
+
+    @Override public boolean isChildOfAnyTarget(String childPath) {
+        for (ConfigurationData.TraceTargetNode targetNode : configurationData.getTrace()) {
+            for (ConfigurationData.TraceChildNode childNode : targetNode.getChildren()) {
+                if (childNode.getPath().equalsIgnoreCase(childPath))
+                    return true;
+            }
         }
         return false;
     }
@@ -155,14 +177,118 @@ public class ConfigurationServiceImpl implements ConfigurationService {
         return false;
     }
 
+    @Override public List<FileAnalyzer> analyzeTraceTarget(String targetPath) {
+        List<FileAnalyzer> analyzers = new ArrayList<>();
+        if (isInTrace(targetPath)) {
+            ConfigurationData.TraceTargetNode targetNode = findTraceTarget(targetPath);
+            for (ConfigurationData.TraceChildNode childNode : targetNode.getChildren()) {
+                if (!isChildOfTarget(targetPath, childNode.getPath()))
+                    continue;
+                String fullChildPath = FileHelper.computeFullPath(project, childNode.getPath());
+                VirtualFile childFile = FileHelper.findVirtualFile(fullChildPath);
+                if (childFile == null)
+                    continue;
+                SupportFileType childFileType = SupportFileType.parse(childNode.getType());
+
+                String childContent = FileHelper.readSync(project, childFile);
+                if (StringUtils.isEmpty(childContent))
+                    continue;
+                FileAnalyzer analyzer = new FileAnalyzer(childFileType, childContent, childNode.getPath());
+                analyzers.add(analyzer);
+            }
+        }
+        return analyzers;
+    }
+
+    @Override public void mergeAll() {
+        for (ConfigurationData.TraceTargetNode targetNode : getAllTraceTarget()) {
+            String targetPath = targetNode.getPath();
+            merge(targetPath);
+        }
+    }
+
+    @Override public ObjectNode merge(String targetPath) {
+        if (!isInTrace(targetPath))
+            return null;
+        ConfigurationData.TraceTargetNode targetNode = findTraceTarget(targetPath);
+        if (targetNode.getChildren().isEmpty()) {
+            return null;
+        }
+        ObjectMapper objectMapper = new ObjectMapper();
+        ObjectNode mergeNode = objectMapper.createObjectNode();
+
+        for (Map.Entry<String, JsonNode> entry : getAllMembersOfTraceTarget(targetPath)) {
+            String key = entry.getKey();
+            JsonNode wrapNode;
+            JsonNode oldNode = mergeNode.get(key);
+            JsonNode newNode = entry.getValue();
+
+            if (mergeNode.hasNonNull(key)) {
+                // key was defined
+                if (!GitsplitterInspection.equalsNode(oldNode, newNode)) {
+                    // Ignore element if they has same key but different value
+                    continue;
+                }
+                if (oldNode.isObject() && newNode.isObject()) {
+                    // merge object
+                    wrapNode = objectMapper.createObjectNode();
+                    Stream.concat(oldNode.fields(), newNode.fields()).forEach(allFieldEntry -> {
+                        String wrapKey = allFieldEntry.getKey();
+                        JsonNode wrapValue = allFieldEntry.getValue();
+                        ((ObjectNode) wrapNode).set(wrapKey, wrapValue);
+                    });
+                } else if (oldNode.isArray() && newNode.isArray()) {
+                    // merge array
+                    wrapNode = objectMapper.createArrayNode();
+                    Stream.concat(oldNode.elements(), newNode.elements()).forEach(((ArrayNode) wrapNode)::add);
+                } else {
+                    wrapNode = newNode.deepCopy();
+                }
+            } else {
+                // key is not defined
+                wrapNode = newNode.deepCopy();
+            }
+            mergeNode.set(key, wrapNode);
+        }
+        outputNode(targetPath, mergeNode);
+        return mergeNode;
+    }
+
+    @Override public void reset() {
+        configurationData.getTrace().clear();
+        syncConfiguration();
+    }
+
+    @Override public void repair() {
+        configurationData.getTrace().removeIf(node -> !isRelPathExist(node.getPath()));
+        for (ConfigurationData.TraceTargetNode targetNode : configurationData.getTrace()) {
+            targetNode.getChildren().removeIf(child -> !isRelPathExist(child.getPath()));
+        }
+        syncConfiguration();
+    }
+
+    @Override public void outputNode(String targetPath, ObjectNode node) {
+        ConfigurationData.TraceTargetNode targetNode = findTraceTarget(targetPath);
+        SupportFileType fileType = SupportFileType.parse(targetNode.getType());
+        try {
+            String content = fileType.deserialize(node);
+            String fullPath = FileHelper.computeFullPath(project, targetNode.getPath());
+            Document document = FileHelper.findDocument(project, fullPath);
+            FileHelper.writeSync(document, content);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     @Override public void runMergeAction(VirtualFileEx merged, List<VirtualFileEx> children, boolean needToCreateChildren) {
         List<VirtualFileEx> copiesChildren = new ArrayList<>();
 
         if (needToCreateChildren) {
             children.forEach(fileEx -> {
                 VirtualFile file = fileEx.getFile();
-                String copyFilename = String.format("%s.%s", file.getName(), SUFFIX);
-                CommandsWrap.runWriteAction(() -> {
+                String copyFilename = String.format("%s.%s.%s", file.getNameWithoutExtension(), SPLIT_FILE_SUFFIX, file.getExtension());
+
+                FileHelper.runWriteActionSync(() -> {
                     VirtualFile copyFile = file.copy(null, file.getParent(), copyFilename);
                     SupportFileType fileType = SupportFileManager.parseContentType(file);
                     copiesChildren.add(VirtualFileEx.of(copyFile, fileType));
@@ -173,23 +299,63 @@ public class ConfigurationServiceImpl implements ConfigurationService {
         }
 
         ConfigurationData.TraceTargetNode target;
-        if (isInTrace(merged.getFile().getPath())) {
-            target = findTraceTarget(merged.getFile().getPath());
+        String mergedPath = FileHelper.computeRelPath(project, merged.getFile().getPath());
+        if (isInTrace(mergedPath)) {
+            target = findTraceTarget(mergedPath);
         } else {
-            target = new ConfigurationData.TraceTargetNode(merged.getFile().getPath(), merged.getTypeName());
-            addTraceTarget(merged.getFile().getPath(), merged.getType());
+            target = new ConfigurationData.TraceTargetNode(mergedPath, merged.getTypeName());
+            addTraceTarget(mergedPath, merged.getType());
         }
+        String targetPath = target.getPath();
         Stream.of(copiesChildren)
-              .filterNot(o -> isChildOfTarget(target.getPath(), o.getPath()))
-              .forEach(o -> addTraceChildInTarget(target.getPath(), o.getPath(), o.getType()));
+              .filterNot(o -> isChildOfTarget(targetPath, FileHelper.computeRelPath(project, o.getPath())))
+              .forEach(o -> addTraceChildInTarget(targetPath, FileHelper.computeRelPath(project, o.getPath()), o.getType()));
     }
 
-    @Override public void runSplitAction(VirtualFile targetFile, String tag, SupportFileType fileType) {
-        String childFilename = String.format("%s_%s.%s.%s", targetFile.getNameWithoutExtension(), tag, targetFile.getExtension(), SUFFIX);
-        CommandsWrap.runWriteAction(() -> {
-            VirtualFile childFile = targetFile.getParent().createChildData(null, childFilename);
-            FileHelper.writeContent(childFile, fileType.getInitContent());
-            runMergeAction(VirtualFileEx.of(targetFile), Collections.singletonList(VirtualFileEx.of(childFile, fileType)), false);
-        });
+    @Override public void runSplitAction(VirtualFile targetFile,
+                                         String tag,
+                                         SupportFileType targetFileType,
+                                         SupportFileType splitFileType) {
+        String childFilename = String.format("%s_%s.%s.%s",
+                                             targetFile.getNameWithoutExtension(),
+                                             tag,
+                                             SPLIT_FILE_SUFFIX,
+                                             splitFileType.getTypeName());
+
+        try {
+            String targetContent = FileHelper.readSync(project, targetFile);
+            JsonNode node = targetFileType.serialize(targetContent);
+            FileHelper.runWriteActionSync(() -> {
+                VirtualFile childFile = targetFile.getParent().createChildData(null, childFilename);
+                String initContent = splitFileType.getInitContent(node);
+                FileHelper.writeSync(project, childFile, initContent);
+                runMergeAction(VirtualFileEx.of(targetFile), Collections.singletonList(VirtualFileEx.of(childFile, splitFileType)), false);
+                FileEditorManager.getInstance(project).openFile(childFile, true);
+            });
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override public Map<String, List<Map.Entry<String, JsonNode>>> getGroupMembersOfTraceTarget(String targetPath) {
+        Map<String, List<Map.Entry<String, JsonNode>>> result = new HashMap<>();
+        List<FileAnalyzer> analyzers = analyzeTraceTarget(targetPath);
+        for (FileAnalyzer analyzer : analyzers) {
+            String childPath = analyzer.filePath;
+            JsonNode node = analyzer.analyze();
+            if (node != null) {
+                if (!node.isObject()) {
+                    continue;
+                }
+                ObjectNode objectNode = (ObjectNode) node;
+                List<Map.Entry<String, JsonNode>> fields = Stream.of(objectNode.fields()).toList();
+                result.put(childPath, fields);
+            }
+        }
+        return result;
+    }
+
+    private List<Map.Entry<String, JsonNode>> getAllMembersOfTraceTarget(String targetPath) {
+        return Stream.of(getGroupMembersOfTraceTarget(targetPath)).flatMap(entry -> Stream.of(entry.getValue())).toList();
     }
 }

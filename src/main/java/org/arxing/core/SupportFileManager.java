@@ -1,4 +1,4 @@
-package org.arxing.manager;
+package org.arxing.core;
 
 import com.annimon.stream.Stream;
 import com.intellij.openapi.vfs.VirtualFile;

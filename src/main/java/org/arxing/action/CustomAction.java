@@ -5,7 +5,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.project.Project;
 
 import org.arxing.service.ConfigurationService;
-import org.arxing.util.MessagesWrap;
+import org.arxing.util.MessagesUtil;
 import org.jetbrains.annotations.NotNull;
 
 public abstract class CustomAction extends AnAction {
@@ -16,7 +16,7 @@ public abstract class CustomAction extends AnAction {
         try {
             onActionPerformed(e);
         } catch (Exception e1) {
-            MessagesWrap.handleThrowable(e1);
+            MessagesUtil.handleThrowable(e1);
         }
     }
 

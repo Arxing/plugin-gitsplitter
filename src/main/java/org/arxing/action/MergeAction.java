@@ -7,17 +7,20 @@ import com.intellij.openapi.actionSystem.CommonDataKeys;
 import com.intellij.openapi.fileChooser.FileChooser;
 import com.intellij.openapi.fileChooser.FileChooserDescriptor;
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory;
+import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
 
-import org.arxing.manager.SupportFileManager;
+import org.arxing.core.SupportFileManager;
 import org.arxing.model.VirtualFileEx;
-import org.arxing.util.MessagesWrap;
+import org.arxing.util.MessagesUtil;
 
 import java.util.List;
 
 public class MergeAction extends CustomAction {
 
     protected void onActionPerformed(AnActionEvent e) throws Exception {
+        VirtualFile projectRootFile = LocalFileSystem.getInstance().findFileByPath(e.getProject().getBasePath());
+        VirtualFile selectFile = e.getData(CommonDataKeys.VIRTUAL_FILE);
         VirtualFile[] splitVirtualFiles = e.getData(CommonDataKeys.VIRTUAL_FILE_ARRAY);
         if (splitVirtualFiles == null || splitVirtualFiles.length == 0)
             return;
@@ -27,19 +30,20 @@ public class MergeAction extends CustomAction {
                                               .toList();
         if (unsupportedFiles.size() > 0) {
             String joins = Stream.of(unsupportedFiles).collect(Collectors.joining("\n"));
-            MessagesWrap.showError("Unsupported:\n%s", joins);
+            MessagesUtil.showError("Unsupported:\n%s", joins);
             return;
         }
         FileChooserDescriptor descriptor = FileChooserDescriptorFactory.createSingleFileDescriptor();
-        VirtualFile mergedVirtualFile = FileChooser.chooseFile(descriptor, getProject(), null);
+        descriptor.setRoots(projectRootFile);
+        VirtualFile mergedVirtualFile = FileChooser.chooseFile(descriptor, getProject(), selectFile);
         if (mergedVirtualFile == null)
             return;
         if (!SupportFileManager.isFileSupport(mergedVirtualFile)) {
-            MessagesWrap.showError("Unsupported file extension(%s)", mergedVirtualFile.getName());
+            MessagesUtil.showError("Unsupported file extension(%s)", mergedVirtualFile.getName());
             return;
         }
         if (Stream.of(splitVirtualFiles).map(VirtualFile::getPath).anyMatch(o -> o.equals(mergedVirtualFile.getPath()))) {
-            MessagesWrap.showError("Split files could not include merged file.");
+            MessagesUtil.showError("Split files could not include merged file.");
             return;
         }
 

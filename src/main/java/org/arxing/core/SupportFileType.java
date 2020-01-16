@@ -1,12 +1,12 @@
-package org.arxing.manager;
+package org.arxing.core;
 
+import com.annimon.stream.Collectors;
 import com.annimon.stream.Stream;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.dataformat.javaprop.JavaPropsFactory;
 import com.fasterxml.jackson.dataformat.javaprop.JavaPropsMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlFactory;
@@ -14,7 +14,23 @@ import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 
+import org.w3c.dom.Document;
+import org.xml.sax.InputSource;
+
+import java.io.IOException;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.util.List;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Result;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 
 public enum SupportFileType {
     json("json"),
@@ -46,60 +62,83 @@ public enum SupportFileType {
 
     public String getInitContent(JsonNode node) {
         try {
-            return getMapper().writeValueAsString(node);
+            return deserialize(node);
         } catch (JsonProcessingException e) {
             e.printStackTrace();
+            String s = e.getMessage();
+            s += Stream.of(e.getStackTrace()).map(StackTraceElement::toString).collect(Collectors.joining("\n"));
+            return s;
         }
-        return null;
     }
 
-    public String getInitContent() {
-        switch (this) {
-            case json:
-                return "{}";
-            case yaml:
-                return "";
-            case xml:
-                return "<root></root>";
-            case properties:
-                return "";
-        }
-        throw new IllegalStateException();
-    }
-
-    public JsonFactory getFactory() {
-        switch (this) {
-            case json:
-                return new JsonFactory();
-            case yaml:
-                return new YAMLFactory();
-            case xml:
-                return new XmlFactory();
-            case properties:
-                return new JavaPropsFactory();
-        }
-        throw new IllegalStateException();
-    }
-
-    public ObjectMapper getMapper() {
+    private ObjectMapper getMapper() {
         ObjectMapper mapper;
         switch (this) {
             case json:
                 mapper = new ObjectMapper();
+                mapper.enable(SerializationFeature.INDENT_OUTPUT);
                 break;
             case yaml:
                 mapper = new YAMLMapper();
+                mapper.enable(SerializationFeature.INDENT_OUTPUT);
                 break;
             case xml:
                 mapper = new XmlMapper();
                 break;
             case properties:
                 mapper = new JavaPropsMapper();
+                mapper.enable(SerializationFeature.INDENT_OUTPUT);
                 break;
             default:
                 throw new IllegalStateException();
         }
-        mapper.enable(SerializationFeature.INDENT_OUTPUT);
         return mapper;
+    }
+
+    public JsonNode serialize(String content) throws IOException {
+        ObjectMapper mapper = getMapper();
+        return mapper.readTree(content);
+    }
+
+    public String deserialize(JsonNode node) throws JsonProcessingException {
+        ObjectMapper mapper = getMapper();
+        String output = mapper.writeValueAsString(node);
+        switch (this) {
+            case json:
+                break;
+            case yaml:
+                break;
+            case xml:
+                output = prettyXml(output);
+                break;
+            case properties:
+                break;
+        }
+        return changeLineSeparators(output);
+    }
+
+    private String changeLineSeparators(String s) {
+        return s.replaceAll("\r\n", "\n").replaceAll("\r", "\n");
+    }
+
+    private String prettyXml(String xml) {
+        try {
+            DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+            Document document = documentBuilder.parse(new InputSource(new StringReader(xml)));
+            TransformerFactory transformerFactory = TransformerFactory.newInstance();
+            Transformer transformer = transformerFactory.newTransformer();
+            transformer.setOutputProperty(OutputKeys.ENCODING, "utf-8");
+            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+            transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", Integer.toString(2));
+            StringWriter stringWriter = new StringWriter();
+            transformer.transform(new DOMSource(document), new StreamResult(stringWriter));
+            String pretty = stringWriter.toString();
+            stringWriter.close();
+            return pretty;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "";
     }
 }

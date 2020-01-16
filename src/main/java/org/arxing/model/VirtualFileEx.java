@@ -2,8 +2,8 @@ package org.arxing.model;
 
 import com.intellij.openapi.vfs.VirtualFile;
 
-import org.arxing.manager.SupportFileManager;
-import org.arxing.manager.SupportFileType;
+import org.arxing.core.SupportFileManager;
+import org.arxing.core.SupportFileType;
 
 public class VirtualFileEx {
     private VirtualFile file;

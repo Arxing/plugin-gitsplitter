@@ -26,13 +26,25 @@ repositories {
 dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.12'
     implementation 'org.arxing:axutils-java:1.0.0'
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.10.1'
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.10.1'
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-properties:2.10.1'
+    implementation 'com.fasterxml.woodstox:woodstox-core:5.1.0'
 }
 
 intellij {
+    version 'IC-2019.3'
     pluginName 'Git Splitter'
     updateSinceUntilBuild false
+
+    plugins = [
+            'yaml',
+            'properties'
+    ]
 }
 patchPluginXml {
+    version "1.0.0"
+    sinceBuild "107.121"
     changeNotes """
       Add change notes here.<br>
       <em>most HTML tags may be used</em>"""

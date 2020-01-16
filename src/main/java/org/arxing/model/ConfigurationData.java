@@ -2,6 +2,7 @@ package org.arxing.model;
 
 import com.intellij.openapi.project.Project;
 
+import org.arxing.core.SupportFileType;
 import org.arxing.util.FileHelper;
 
 import java.util.ArrayList;
@@ -64,6 +65,10 @@ public class ConfigurationData {
         public void setType(String type) {
             this.type = type;
         }
+
+        public SupportFileType getAsSupportFileType() {
+            return SupportFileType.parse(type);
+        }
     }
 
     public static class TraceChildNode {
@@ -89,6 +94,10 @@ public class ConfigurationData {
 
         public void setType(String type) {
             this.type = type;
+        }
+
+        public SupportFileType getAsSupportFileType() {
+            return SupportFileType.parse(type);
         }
     }
 }

@@ -7,35 +7,96 @@
     Hello
     ]]></description>
 
+    <idea-version since-build="107.121"/>
+
     <depends>com.intellij.modules.lang</depends>
+    <depends>org.jetbrains.plugins.yaml</depends>
+    <depends>com.intellij.modules.xml</depends>
+    <depends>com.intellij.properties</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <postStartupActivity implementation="org.arxing.worker.Initializer"/>
+        <postStartupActivity implementation="org.arxing.core.Initializer"/>
 
-        <fileType name="Split file"
-                  implementationClass="org.arxing.filetype.GitSplitFileType"
-                  fieldName="INSTANCE"
-                  language="JSON"
-                  extensions="gitsplit"/>
+        <postStartupActivity implementation="org.arxing.core.MergeRunner"/>
 
         <projectService serviceInterface="org.arxing.service.ConfigurationService"
                         serviceImplementation="org.arxing.service.impl.ConfigurationServiceImpl"/>
+
+        <localInspection
+            language="JSON"
+            groupPath="Git Splitter"
+            groupName="mdfk display name~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+            enabledByDefault="true"
+            implementationClass="org.arxing.core.GitsplitterInspection"
+            shortName="gitsplitter_json"/>
+
+        <localInspection
+            language="XML"
+            groupPath="Git Splitter"
+            groupName="mdfk display name~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+            enabledByDefault="true"
+            implementationClass="org.arxing.core.GitsplitterInspection"
+            shortName="gitsplitter_xml"/>
+
+        <localInspection
+            language="yaml"
+            bundle="messages.YAMLBundle"
+            groupPath="Git Splitter"
+            groupName="mdfk display name~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+            enabledByDefault="true"
+            implementationClass="org.arxing.core.GitsplitterInspection"
+            shortName="gitsplitter_yaml"/>
+
+        <localInspection
+            language="Properties"
+            bundle="messages.PropertiesBundle"
+            groupPath="Git Splitter"
+            groupName="mdfk display name~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+            enabledByDefault="true"
+            implementationClass="org.arxing.core.GitsplitterInspection"
+            shortName="gitsplitter_properties"/>
+
+        <iconProvider implementation="IconsProvider"/>
+
     </extensions>
 
+    <!--<project-components>-->
+    <!--<component>-->
+    <!--<interface-class>com.intellij.configurationStore.SettingsSavingComponent</interface-class>-->
+    <!--<implementation-class>org.arxing.core.InterceptSaveAll</implementation-class>-->
+    <!--</component>-->
+    <!--</project-components>-->
+
     <actions>
+
         <group text="Git Splitter"
-               popup="true"
-               icon="icons/guan.jpg">
+               icon="icons/spider_home.svg"
+               popup="true">
             <add-to-group group-id="ProjectViewPopupMenu"
-                          anchor="last"/>
+                          anchor="first"/>
+            <action id="GitSplitter.TraceAction"
+                    class="org.arxing.action.TraceAction"
+                    text="Trace"/>
+
+            <action id="GitSplitter.StopTraceAction"
+                    class="org.arxing.action.StopTraceAction"
+                    text="Stop Trace"/>
+
             <action class="org.arxing.action.SplitAction"
                     id="GitSplitter.GittingSplitAction"
-                    text="Split File"
-                    icon="icons/uu.png"/>
+                    text="Split File ..."/>
 
             <action id="GitSplitter.MergeAction"
                     class="org.arxing.action.MergeAction"
-                    text="Merge Files Into"/>
+                    text="Merge Files into ..."/>
+
+            <action id="GitSplitter.ResetAction"
+                    class="org.arxing.action.ResetAction"
+                    text="Reset Configuration ..."/>
+
+            <action id="GitSplitter.RepairAction"
+                    class="org.arxing.action.RepairAction"
+                    text="Repair Configuration(Clear Not Existing Traces) ..."/>
         </group>
     </actions>
 </idea-plugin>

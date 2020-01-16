@@ -1,4 +1,4 @@
-package org.arxing.manager;
+package org.arxing.core;
 
 public enum SupportFileExtension {
     json("json", SupportFileType.json),

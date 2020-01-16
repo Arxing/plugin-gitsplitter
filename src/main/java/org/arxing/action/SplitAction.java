@@ -6,9 +6,9 @@ import com.intellij.openapi.ui.InputValidator;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.VirtualFile;
 
-import org.arxing.manager.SupportFileManager;
-import org.arxing.manager.SupportFileType;
-import org.arxing.util.MessagesWrap;
+import org.arxing.core.SupportFileManager;
+import org.arxing.core.SupportFileType;
+import org.arxing.util.MessagesUtil;
 import org.jetbrains.annotations.NotNull;
 
 public class SplitAction extends CustomAction {
@@ -18,13 +18,13 @@ public class SplitAction extends CustomAction {
         if (file == null)
             return;
         if (!SupportFileManager.isFileSupport(file)) {
-            MessagesWrap.showWarning("Unsupported file extension");
+            MessagesUtil.showWarning("Unsupported file extension");
             return;
         }
-        String tag = Messages.showInputDialog("Input your tag", MessagesWrap.TITLE, Messages.getInformationIcon());
+        String tag = Messages.showInputDialog("Input your tag", MessagesUtil.TITLE, Messages.getInformationIcon());
         if (tag == null)
             return;
-        SupportFileType supportFileType = SupportFileManager.parseContentType(file);
+        SupportFileType targetFileType = SupportFileManager.parseContentType(file);
 
 
         InputValidator validator = new InputValidator() {
@@ -38,15 +38,15 @@ public class SplitAction extends CustomAction {
         };
 
         String chooseTypeName = Messages.showEditableChooseDialog("Choose content type",
-                                                                  MessagesWrap.TITLE,
+                                                                  MessagesUtil.TITLE,
                                                                   Messages.getInformationIcon(),
                                                                   SupportFileType.getOptionsArray(),
-                                                                  supportFileType.getTypeName(),
+                                                                  targetFileType.getTypeName(),
                                                                   validator);
         if (chooseTypeName == null)
             return;
-        supportFileType = SupportFileType.parse(chooseTypeName);
+        SupportFileType splitFileType = SupportFileType.parse(chooseTypeName);
 
-        getConfigurationService().runSplitAction(file, tag, supportFileType);
+        getConfigurationService().runSplitAction(file, tag, targetFileType, splitFileType);
     }
 }
