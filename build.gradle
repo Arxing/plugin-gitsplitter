@@ -11,7 +11,6 @@ plugins {
     id 'org.jetbrains.intellij' version '0.4.15'
 }
 
-setArchivesBaseName('ppoo')
 group 'org.arxing'
 version ''
 
@@ -45,11 +44,12 @@ intellij {
 }
 
 patchPluginXml {
-    version "1.0.1"
+    version "1.0.5"
     sinceBuild "107.121"
     changeNotes """
-      Add change notes here.<br>
-      <em>most HTML tags may be used</em>
+      # 1.0.5
+      - Fixed supports for properties.
+      
       """
 }
 

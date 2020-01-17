@@ -9,7 +9,6 @@ import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.util.xml.DomElementsNavigationManager;
 
 import org.arxing.axutils_java.JParser;
 import org.arxing.axutils_java.StringUtils;
@@ -21,7 +20,6 @@ import org.arxing.model.ConfigurationData;
 import org.arxing.model.VirtualFileEx;
 import org.arxing.service.ConfigurationService;
 import org.arxing.util.FileHelper;
-import org.arxing.util.MessagesUtil;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -38,30 +36,10 @@ public class ConfigurationServiceImpl implements ConfigurationService {
 
     public ConfigurationServiceImpl(Project project) {
         this.project = project;
-        configurationFile = FileHelper.findOrCreateConfigurationFile(project);
+        FileHelper.findOrCreateConfigurationFile(project);
+        configurationFile = FileHelper.initConfigurationFile(project);
         String configurationContent = FileHelper.readSync(project, configurationFile);
-        configurationData = getConfigurationData(configurationContent);
-    }
-
-    private int retries = 0;
-
-    private ConfigurationData getConfigurationData(String content) {
-        if (configurationData != null)
-            return configurationData;
-        configurationData = JParser.fromJsonOrNull(content, ConfigurationData.class);
-        if (configurationData != null) {
-            return configurationData;
-        } else {
-            if (++retries >= 5) {
-                throw new IllegalStateException("Can not init configuration data, please reload project.");
-            }
-            try {
-                Thread.sleep(500);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return getConfigurationData(content);
-        }
+        configurationData = JParser.fromJsonOrNull(configurationContent, ConfigurationData.class);
     }
 
     private boolean isRelPathExist(String relPath) {

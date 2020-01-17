@@ -18,6 +18,7 @@ import org.arxing.model.ConfigurationData;
 import org.arxing.service.ConfigurationService;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
@@ -39,24 +40,22 @@ public class FileHelper {
         return file.getPath().equalsIgnoreCase(conf.getPath());
     }
 
-    public static VirtualFile createConfigurationFile(Project project) {
-        AtomicReference<VirtualFile> result = new AtomicReference<>();
-        runWriteActionSync(() -> {
-            VirtualFile configuration = findProjectRootFile(project).createChildData(null, CONFIGURATION_FILE_NAME);
-            ConfigurationData data = ConfigurationService.initConfigurationData();
-            writeSync(project, configuration, JParser.toPrettyJson(data));
-            result.set(configuration);
-        });
-        return result.get();
+    public static VirtualFile initConfigurationFile(Project project) {
+        VirtualFile configurationFile = findOrCreateConfigurationFile(project);
+        if (configurationFile == null)
+            throw new IllegalStateException("Can not create configuration file.");
+        String content = readSync(project, configurationFile);
+        if (content.isEmpty()) {
+            content = JParser.toPrettyJson(ConfigurationService.initConfigurationData());
+            writeSync(project, configurationFile, content);
+        }
+        return configurationFile;
     }
 
     public static VirtualFile findOrCreateConfigurationFile(Project project) {
-        VirtualFile configuration = findProjectRootFile(project).findChild(CONFIGURATION_FILE_NAME);
-        if (configuration == null) {
-            return createConfigurationFile(project);
-        } else {
-            return configuration;
-        }
+        AtomicReference<VirtualFile> result = new AtomicReference<>();
+        runWriteActionSync(() -> result.set(findProjectRootFile(project).findOrCreateChildData(null, CONFIGURATION_FILE_NAME)));
+        return result.get();
     }
 
     public static String relativizeToConfigurationFile(Project project, String path) {

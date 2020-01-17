@@ -4,7 +4,7 @@ public enum SupportFileExtension {
     json("json", SupportFileType.json),
     arb("arb", SupportFileType.json),
     yaml("yaml", SupportFileType.yaml),
-    properties("properties", SupportFileType.json),
+    properties("properties", SupportFileType.properties),
     xml("xml", SupportFileType.xml);
 
     private SupportFileType targetType;
