@@ -4,7 +4,7 @@
     <vendor email="meiswind711108@gmail.com">Arxing</vendor>
 
     <description><![CDATA[
-    Hello
+    這是一個檔案分割/合併外掛
     ]]></description>
 
     <idea-version since-build="107.121"/>
@@ -70,7 +70,7 @@
     <actions>
 
         <group text="Git Splitter"
-               icon="icons/spider_home.svg"
+               icon="/icons/spider_home.svg"
                popup="true">
             <add-to-group group-id="ProjectViewPopupMenu"
                           anchor="first"/>

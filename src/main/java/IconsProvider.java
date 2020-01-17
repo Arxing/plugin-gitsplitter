@@ -1,8 +1,8 @@
 import com.intellij.ide.IconProvider;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.IconLoader;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
-import com.intellij.ui.IconManager;
 
 import org.arxing.service.ConfigurationService;
 import org.jetbrains.annotations.NotNull;
@@ -12,9 +12,9 @@ import javax.swing.Icon;
 
 public class IconsProvider extends IconProvider {
 
-    public static final Icon Group = IconManager.getInstance().getIcon("/icons/spider_home.svg", IconsProvider.class);
+    public static final Icon Group = IconLoader.getIcon("/icons/spider_home.svg");
 
-    public static final Icon Segment = IconManager.getInstance().getIcon("/icons/spider.svg", IconsProvider.class);
+    public static final Icon Segment = IconLoader.getIcon("/icons/spider.svg");
 
     @Nullable @Override public Icon getIcon(@NotNull PsiElement element, int flags) {
         Project project = element.getProject();

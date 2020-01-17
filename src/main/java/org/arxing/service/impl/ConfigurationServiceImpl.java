@@ -40,7 +40,28 @@ public class ConfigurationServiceImpl implements ConfigurationService {
         this.project = project;
         configurationFile = FileHelper.findOrCreateConfigurationFile(project);
         String configurationContent = FileHelper.readSync(project, configurationFile);
-        configurationData = JParser.fromJsonOrNull(configurationContent, ConfigurationData.class);
+        configurationData = getConfigurationData(configurationContent);
+    }
+
+    private int retries = 0;
+
+    private ConfigurationData getConfigurationData(String content) {
+        if (configurationData != null)
+            return configurationData;
+        configurationData = JParser.fromJsonOrNull(content, ConfigurationData.class);
+        if (configurationData != null) {
+            return configurationData;
+        } else {
+            if (++retries >= 5) {
+                throw new IllegalStateException("Can not init configuration data, please reload project.");
+            }
+            try {
+                Thread.sleep(500);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return getConfigurationData(content);
+        }
     }
 
     private boolean isRelPathExist(String relPath) {

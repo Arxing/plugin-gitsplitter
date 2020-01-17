@@ -18,6 +18,7 @@ import com.intellij.util.messages.MessageBusConnection;
 import org.arxing.interfaces.VirtualFileWatcher;
 import org.arxing.model.ConfigurationData;
 import org.arxing.service.ConfigurationService;
+import org.arxing.util.MessagesUtil;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -33,7 +34,6 @@ public class Initializer implements StartupActivity, BulkFileListener {
     @Override public void runActivity(@NotNull Project project) {
         listenAllTrace();
         service = ConfigurationService.getInstance(project);
-        service.mergeAll();
     }
 
     @Override public void after(@NotNull List<? extends VFileEvent> events) {
@@ -54,8 +54,18 @@ public class Initializer implements StartupActivity, BulkFileListener {
         VFileEvent event = Stream.of(events).findFirst().orElse(null);
         if (event == null)
             return;
+        if (!event.getFile().isInLocalFileSystem()) {
+            MessagesUtil.showError("nononono: %s", event.getPath());
+            return;
+        }
+
         String fullPath = getFullPathWithEvent(event);
-        String relPath = service.computeRelPath(fullPath);
+        String relPath;
+        try {
+            relPath = service.computeRelPath(fullPath);
+        } catch (Exception e) {
+            return;
+        }
         if (!service.isInTraceOrChildOfAnyTarget(relPath))
             return;
         boolean isTarget = service.isInTrace(relPath);
@@ -110,15 +120,15 @@ public class Initializer implements StartupActivity, BulkFileListener {
             }
         }
 
-        @Override public void onContentChange(VFileContentChangeEvent e,
-                                              boolean isTarget,
-                                              ConfigurationData.TraceTargetNode targetNode,
-                                              ConfigurationData.TraceChildNode childNode) {
-            if (isTarget)
-                return;
-            String targetPath = targetNode.getPath();
-            service.merge(targetPath);
-        }
+//        @Override public void onContentChange(VFileContentChangeEvent e,
+//                                              boolean isTarget,
+//                                              ConfigurationData.TraceTargetNode targetNode,
+//                                              ConfigurationData.TraceChildNode childNode) {
+//            if (isTarget)
+//                return;
+//            String targetPath = targetNode.getPath();
+//            service.merge(targetPath);
+//        }
 
         @Override public void onPropertyChange(VFilePropertyChangeEvent e,
                                                boolean isTarget,

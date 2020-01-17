@@ -2,16 +2,12 @@ package org.arxing.core;
 
 import com.annimon.stream.Collectors;
 import com.annimon.stream.Stream;
-import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.dataformat.javaprop.JavaPropsFactory;
 import com.fasterxml.jackson.dataformat.javaprop.JavaPropsMapper;
-import com.fasterxml.jackson.dataformat.xml.XmlFactory;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 
 import org.w3c.dom.Document;
@@ -24,9 +20,7 @@ import java.util.List;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Result;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
@@ -38,8 +32,14 @@ public enum SupportFileType {
     xml("xml"),
     properties("properties"),;
 
-    public static SupportFileType parse(String typeName) {
-        return Stream.of(values()).filter(o -> o.typeName.equalsIgnoreCase(typeName)).findFirst().orElse(null);
+    public static SupportFileType parse(String extension) {
+        if (extension == null)
+            return null;
+        return Stream.of(SupportFileExtension.values())
+                     .filter(o -> o.getExtension().equalsIgnoreCase(extension))
+                     .map(SupportFileExtension::getContentType)
+                     .findFirst()
+                     .orElse(null);
     }
 
     private String typeName;

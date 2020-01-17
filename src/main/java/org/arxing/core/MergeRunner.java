@@ -12,9 +12,9 @@ import java.util.TimerTask;
 
 
 public class MergeRunner implements StartupActivity {
-    private Timer timer = new Timer();
 
     @Override public void runActivity(@NotNull Project project) {
+        Timer timer = new Timer();
         timer.schedule(new Task(project), 0, 1000);
     }
 
