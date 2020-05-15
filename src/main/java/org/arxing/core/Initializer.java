@@ -55,7 +55,6 @@ public class Initializer implements StartupActivity, BulkFileListener {
         if (event == null)
             return;
         if (!event.getFile().isInLocalFileSystem()) {
-            MessagesUtil.showError("nononono: %s", event.getPath());
             return;
         }
 

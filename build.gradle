@@ -44,11 +44,14 @@ intellij {
 }
 
 patchPluginXml {
-    version "1.0.5"
+    version "1.0.6"
     sinceBuild "107.121"
     changeNotes """
       # 1.0.5
       - Fixed supports for properties.
+      
+      # 1.0.6
+      -
       
       """
 }
